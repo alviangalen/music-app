@@ -1,16 +1,4 @@
 import React, { useRef, useEffect, useState } from "react";
-import {
-  Play,
-  Pause,
-  SkipBack,
-  SkipForward,
-  Volume2,
-  VolumeX,
-  
-  Music2,
-  AlertCircle,
-  Loader2,
-} from "lucide-react";
 import { Track } from "../types";
 
 interface AudioPlayerProps {
@@ -30,26 +18,20 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 }) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(30); // iTunes previews are 30s
-  const [volume, setVolume] = useState(0.8);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isBuffering, setIsBuffering] = useState(false);
-  const [playbackError, setPlaybackError] = useState<string | null>(null);
+  const [duration, setDuration] = useState(30);
+  const [volume, setVolume] = useState(0.75);
+  const [isLiked, setIsLiked] = useState(false);
 
-  // Synchronize play/pause state with native HTML5 audio
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !currentTrack) return;
 
     if (isPlaying) {
-      setPlaybackError(null);
       const playPromise = audio.play();
       if (playPromise !== undefined) {
-        playPromise.catch((error) => {
-          // Browser autoplay policy or invalid source
-          console.warn("Audio playback interrupted or blocked:", error);
-          if (error.name !== "AbortError") {
-            setPlaybackError("Playback blocked by browser policy or format");
+        playPromise.catch((err) => {
+          if (err.name !== "AbortError") {
+            console.warn("Audio playback interrupted:", err);
           }
         });
       }
@@ -58,14 +40,12 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     }
   }, [isPlaying, currentTrack]);
 
-  // Adjust volume
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : volume;
+      audioRef.current.volume = volume;
     }
-  }, [volume, isMuted]);
+  }, [volume]);
 
-  // Format seconds to mm:ss
   const formatTime = (secs: number) => {
     if (isNaN(secs) || secs < 0) return "0:00";
     const minutes = Math.floor(secs / 60);
@@ -86,174 +66,200 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const targetTime = Number(e.target.value);
-    setCurrentTime(targetTime);
+    const target = Number(e.target.value);
+    setCurrentTime(target);
     if (audioRef.current) {
-      audioRef.current.currentTime = targetTime;
+      audioRef.current.currentTime = target;
     }
-  };
-
-  const toggleMute = () => {
-    setIsMuted((prev) => !prev);
   };
 
   if (!currentTrack) {
     return null;
   }
 
+  const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
+
   return (
-    <aside
-      aria-label="Audio playback bar"
-      className="fixed bottom-0 left-0 right-0 z-50 bg-surface/95 backdrop-blur-xl border-t border-surface-hover/80 px-4 py-3 shadow-[0_-8px_30px_rgba(0,0,0,0.6)]"
+    <footer
+      aria-label="Media Player"
+      className="fixed bottom-0 left-0 right-0 h-[84px] bg-[#0c0c0c] border-t border-[#181818] px-6 flex items-center justify-between z-50 select-none"
     >
-      {/* Hidden Native Audio Element */}
       <audio
         ref={audioRef}
         src={currentTrack.previewUrl}
         preload="auto"
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
-        onWaiting={() => setIsBuffering(true)}
-        onPlaying={() => setIsBuffering(false)}
-        onCanPlay={() => setIsBuffering(false)}
         onEnded={onNext}
-        onError={() => {
-          setIsBuffering(false);
-          setPlaybackError("Unable to load audio preview stream");
-        }}
       />
 
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3 md:gap-6">
-        {/* Left Section: Track Info */}
-        <div className="flex items-center gap-3 w-full md:w-1/4 min-w-0">
-          <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-surface-card flex-shrink-0 border border-surface-hover">
-            {currentTrack.artworkUrl ? (
-              <img
-                src={currentTrack.artworkUrl}
-                alt={currentTrack.title}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-muted">
-                <Music2 className="w-6 h-6" />
-              </div>
-            )}
-          </div>
-
-          <div className="min-w-0 flex-grow">
-            <h4
-              title={currentTrack.title}
-              className="text-sm font-semibold text-primary truncate"
-            >
-              {currentTrack.title}
-            </h4>
-            <p
-              title={currentTrack.artist}
-              className="text-xs text-secondary truncate"
-            >
-              {currentTrack.artist}
-            </p>
-            {playbackError && (
-              <div className="flex items-center gap-1 text-[11px] text-rose-400 mt-0.5">
-                <AlertCircle className="w-3 h-3 flex-shrink-0" />
-                <span className="truncate">{playbackError}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Center Section: Controls & Scrubber */}
-        <div className="flex flex-col items-center gap-1.5 w-full md:w-2/4 max-w-xl">
-          {/* Action buttons */}
-          <div className="flex items-center gap-4">
-            <button
-              type="button"
-              onClick={onPrevious}
-              className="text-secondary hover:text-primary transition-colors p-1.5 rounded-full hover:bg-surface-hover"
-              aria-label="Previous track"
-            >
-              <SkipBack className="w-5 h-5 fill-current" />
-            </button>
-
-            <button
-              type="button"
-              onClick={onPlayPause}
-              disabled={Boolean(playbackError)}
-              className="w-10 h-10 rounded-full bg-accent hover:bg-accent-hover text-white flex items-center justify-center shadow-lg shadow-accent/40 transform transition-transform hover:scale-105 active:scale-95 disabled:opacity-50"
-              aria-label={isPlaying ? "Pause preview" : "Play preview"}
-            >
-              {isBuffering ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : isPlaying ? (
-                <Pause className="w-5 h-5 fill-current" />
-              ) : (
-                <Play className="w-5 h-5 fill-current translate-x-0.5" />
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={onNext}
-              className="text-secondary hover:text-primary transition-colors p-1.5 rounded-full hover:bg-surface-hover"
-              aria-label="Next track"
-            >
-              <SkipForward className="w-5 h-5 fill-current" />
-            </button>
-          </div>
-
-          {/* Progress Slider */}
-          <div className="flex items-center gap-2.5 w-full text-[11px] text-secondary font-mono">
-            <span className="w-8 text-right">{formatTime(currentTime)}</span>
-            <div className="relative flex-grow flex items-center">
-              <input
-                type="range"
-                min={0}
-                max={duration || 30}
-                step={0.1}
-                value={currentTime}
-                onChange={handleSeek}
-                className="w-full h-1.5 rounded-lg accent-accent"
-                aria-label="Audio scrubber"
-              />
+      {/* Left: Track Information */}
+      <div className="flex items-center gap-3.5 w-1/4 min-w-[180px]">
+        <div className="w-12 h-12 rounded-lg bg-[#181818] overflow-hidden flex-shrink-0 border border-[#222222]">
+          {currentTrack.artworkUrl ? (
+            <img
+              src={currentTrack.artworkUrl}
+              alt={currentTrack.title}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-[#555555]">
+              <span className="text-xs">No Art</span>
             </div>
-            <span className="w-8">{formatTime(duration)}</span>
-          </div>
+          )}
         </div>
 
-        {/* Right Section: Volume & Badges */}
-        <div className="hidden md:flex items-center justify-end gap-3 w-1/4">
+        <div className="min-w-0 flex flex-col justify-center">
+          <span
+            title={currentTrack.title}
+            className="text-sm font-semibold text-[#f4f4f4] truncate leading-snug"
+          >
+            {currentTrack.title}
+          </span>
+          <span
+            title={currentTrack.artist}
+            className="text-xs text-[#808080] truncate mt-0.5"
+          >
+            {currentTrack.artist}
+          </span>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setIsLiked(!isLiked)}
+          aria-label={isLiked ? "Unlike track" : "Like track"}
+          className={`p-1.5 transition-colors ml-1 ${
+            isLiked ? "text-white" : "text-[#666666] hover:text-[#f4f4f4]"
+          }`}
+        >
+          <svg viewBox="0 0 24 24" fill={isLiked ? "currentColor" : "none"} className="w-4 h-4">
+            <path
+              d="M20.8 5.8a5 5 0 0 0-7.1 0L12 7.5l-1.7-1.7a5 5 0 0 0-7.1 7.1L12 21l8.8-8.1a5 5 0 0 0 0-7.1Z"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      </div>
+
+      {/* Center: Controls and Scrubber Bar */}
+      <div className="flex flex-col items-center gap-1.5 w-2/4 max-w-xl">
+        <div className="flex items-center gap-5">
+          {/* Previous Button */}
           <button
             type="button"
-            onClick={toggleMute}
-            className="text-secondary hover:text-primary transition-colors p-1.5 rounded-full hover:bg-surface-hover"
-            aria-label={isMuted ? "Unmute audio" : "Mute audio"}
+            onClick={onPrevious}
+            aria-label="Previous track"
+            className="text-[#888888] hover:text-white transition-colors p-1"
           >
-            {isMuted || volume === 0 ? (
-              <VolumeX className="w-5 h-5" />
+            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+              <path d="M6 5h2v14H6zM18.5 5.8v12.4a1 1 0 0 1-1.6.8l-7.5-6.2a1 1 0 0 1 0-1.6L16.9 5a1 1 0 0 1 1.6.8Z" />
+            </svg>
+          </button>
+
+          {/* Play/Pause Button (Solid White Circle) */}
+          <button
+            type="button"
+            onClick={onPlayPause}
+            aria-label={isPlaying ? "Jeda" : "Putar"}
+            className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-transform cursor-pointer"
+          >
+            {isPlaying ? (
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                <rect x="6.5" y="5" width="3.5" height="14" rx="1" />
+                <rect x="14" y="5" width="3.5" height="14" rx="1" />
+              </svg>
             ) : (
-              <Volume2 className="w-5 h-5" />
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 translate-x-0.5">
+                <path d="M8 5.7c0-1.2 1.3-1.9 2.3-1.2l10 6.3a1.4 1.4 0 0 1 0 2.4l-10 6.3A1.5 1.5 0 0 1 8 18.3V5.7Z" />
+              </svg>
             )}
           </button>
 
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.05}
-            value={isMuted ? 0 : volume}
-            onChange={(e) => {
-              setIsMuted(false);
-              setVolume(Number(e.target.value));
-            }}
-            className="w-20 h-1.5 rounded-lg accent-accent"
-            aria-label="Volume slider"
-          />
+          {/* Next Button */}
+          <button
+            type="button"
+            onClick={onNext}
+            aria-label="Next track"
+            className="text-[#888888] hover:text-white transition-colors p-1"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+              <path d="M16 5h2v14h-2zM5.5 5.8v12.4a1 1 0 0 0 1.6.8l7.5-6.2a1 1 0 0 0 0-1.6L7.1 5a1 1 0 0 0-1.6.8Z" />
+            </svg>
+          </button>
+        </div>
 
-          <span className="text-[10px] bg-surface-card border border-surface-hover px-2 py-1 rounded text-muted font-medium ml-2">
-            30s AAC
-          </span>
+        {/* Scrubber Line */}
+        <div className="flex items-center gap-3 w-full text-[11px] text-[#777777] font-mono">
+          <span className="w-7 text-right">{formatTime(currentTime)}</span>
+          <div className="relative flex-grow flex items-center group cursor-pointer h-4">
+            <div className="absolute left-0 right-0 h-1 bg-[#262626] rounded-full overflow-hidden">
+              <div
+                className="h-full bg-white rounded-full transition-all duration-75"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={duration || 30}
+              step={0.1}
+              value={currentTime}
+              onChange={handleSeek}
+              aria-label="Seek timeline"
+              className="w-full h-1 opacity-0 z-10 cursor-pointer"
+            />
+          </div>
+          <span className="w-7">{formatTime(duration)}</span>
         </div>
       </div>
-    </aside>
+
+      {/* Right: Volume & Help Controls */}
+      <div className="flex items-center justify-end gap-3 w-1/4">
+        <button
+          type="button"
+          onClick={() => setVolume(volume === 0 ? 0.75 : 0)}
+          aria-label="Volume toggle"
+          className="text-[#777777] hover:text-white transition-colors p-1"
+        >
+          <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4">
+            <path
+              d="M11 5 6 9H2v6h4l5 4V5Z"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinejoin="round"
+            />
+            {volume > 0 && (
+              <path
+                d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9.5 9.5 0 0 1 0 14"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+              />
+            )}
+          </svg>
+        </button>
+
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.05}
+          value={volume}
+          onChange={(e) => setVolume(Number(e.target.value))}
+          aria-label="Volume slider"
+          className="w-20 h-1 bg-[#262626] rounded-full appearance-none outline-none"
+        />
+
+        <button
+          type="button"
+          aria-label="Help"
+          className="w-6 h-6 rounded-full border border-[#2a2a2a] text-[#777777] hover:text-white hover:border-[#444444] text-xs flex items-center justify-center transition-colors ml-2"
+        >
+          ?
+        </button>
+      </div>
+    </footer>
   );
 };

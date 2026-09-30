@@ -1,5 +1,4 @@
 import React from "react";
-import { Play, Pause, Music2 } from "lucide-react";
 import { Track } from "../types";
 
 interface TrackCardProps {
@@ -18,82 +17,62 @@ export const TrackCard: React.FC<TrackCardProps> = ({
   return (
     <div
       onClick={() => onTogglePlay(track)}
-      className={`group relative flex flex-col bg-surface-card hover:bg-surface-hover border rounded-2xl p-3.5 cursor-pointer transition-all duration-300 transform hover:-translate-y-1 ${
+      className={`group relative flex flex-col bg-[#141414] hover:bg-[#1a1a1a] border rounded-xl p-3.5 cursor-pointer transition-all duration-200 ${
         isActive
-          ? "border-accent shadow-[0_0_24px_rgba(99,102,241,0.25)] ring-1 ring-accent"
-          : "border-surface-hover hover:border-surface-hover/80 hover:shadow-xl hover:shadow-black/40"
+          ? "border-neutral-500 bg-[#1c1c1c]"
+          : "border-[#1c1c1c] hover:border-[#2a2a2a]"
       }`}
     >
-      {/* Artwork Container */}
-      <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-surface mb-3.5">
+      {/* Artwork with subtle play overlay */}
+      <div className="relative aspect-square w-full rounded-lg overflow-hidden bg-[#0d0d0d] mb-3">
         {track.artworkUrl ? (
           <img
             src={track.artworkUrl}
-            alt={`${track.title} by ${track.artist}`}
+            alt={`${track.title} - ${track.artist}`}
             loading="lazy"
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-surface-hover text-muted">
-            <Music2 className="w-12 h-12" />
+          <div className="w-full h-full flex items-center justify-center text-[#555555]">
+            <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8">
+              <path d="M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm12 0a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" stroke="currentColor" strokeWidth="1.6" />
+            </svg>
           </div>
         )}
 
-        {/* Dark Hover/Active Overlay */}
+        {/* Hover / Active Play Button Overlay */}
         <div
-          className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center transition-opacity duration-200 ${
+          className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity duration-200 ${
             isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
           }`}
         >
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onTogglePlay(track);
-            }}
-            aria-label={isActive && isPlaying ? `Pause ${track.title}` : `Play ${track.title}`}
-            className="w-12 h-12 rounded-full bg-accent hover:bg-accent-hover text-white flex items-center justify-center shadow-lg shadow-accent/40 transform transition-transform duration-200 hover:scale-110 active:scale-95"
-          >
+          <div className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center shadow-lg transform group-hover:scale-105 active:scale-95 transition-transform">
             {isActive && isPlaying ? (
-              <Pause className="w-6 h-6 fill-current" />
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                <rect x="6" y="5" width="4" height="14" rx="1" />
+                <rect x="14" y="5" width="4" height="14" rx="1" />
+              </svg>
             ) : (
-              <Play className="w-6 h-6 fill-current translate-x-0.5" />
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 translate-x-0.5">
+                <path d="M8 5.7c0-1.2 1.3-1.9 2.3-1.2l10 6.3a1.4 1.4 0 0 1 0 2.4l-10 6.3A1.5 1.5 0 0 1 8 18.3V5.7Z" />
+              </svg>
             )}
-          </button>
-        </div>
-
-        {/* Live Audio Equalizer Animation (Active track only) */}
-        {isActive && isPlaying && (
-          <div className="absolute top-2.5 right-2.5 flex items-end gap-0.5 h-4 bg-black/70 backdrop-blur-md px-1.5 py-1 rounded-md">
-            <span className="w-1 bg-accent rounded-full animate-equalize" />
-            <span className="w-1 bg-accent rounded-full animate-equalize-mid" />
-            <span className="w-1 bg-accent rounded-full animate-equalize-slow" />
           </div>
-        )}
-
-        {/* 30s Preview Badge */}
-        <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-semibold text-secondary uppercase tracking-wider">
-          30s Preview
         </div>
       </div>
 
-      {/* Metadata */}
-      <div className="flex flex-col flex-grow min-w-0">
-        <h3
-          title={track.title}
-          className={`text-sm font-semibold truncate transition-colors ${
-            isActive ? "text-accent" : "text-primary group-hover:text-white"
-          }`}
-        >
-          {track.title}
-        </h3>
-        <p title={track.artist} className="text-xs text-secondary truncate mt-1">
-          {track.artist}
-        </p>
-        <p title={track.album} className="text-[11px] text-muted truncate mt-0.5">
-          {track.album}
-        </p>
-      </div>
+      {/* Track Info */}
+      <h3
+        title={track.title}
+        className={`text-sm font-medium truncate ${
+          isActive ? "text-white" : "text-[#f0f0f0]"
+        }`}
+      >
+        {track.title}
+      </h3>
+      <p title={track.artist} className="text-xs text-[#808080] truncate mt-1">
+        {track.artist}
+      </p>
     </div>
   );
 };
